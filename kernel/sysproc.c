@@ -4,8 +4,11 @@
 #include "date.h"
 #include "param.h"
 #include "memlayout.h"
+#include "sysinfo.h"
 #include "spinlock.h"
 #include "proc.h"
+
+struct sysinfo;
 
 uint64
 sys_exit(void)
@@ -95,3 +98,34 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_trace(void)
+{
+	int mask;
+	
+	if(argint(0, &mask) < 0)
+    return -1;
+  myproc()->mask = mask;
+  
+  return 0;
+}
+
+uint64
+sys_sysinfo(void)
+{
+	uint64 infoaddr;
+	if(argaddr(0, &infoaddr) < 0)
+		return -1;
+		
+	struct sysinfo info;
+	info.freemem = kcountfree();
+	info.nproc = proccount();
+	
+	struct proc *p = myproc();
+	if(copyout(p->pagetable, infoaddr, (char*)&info, sizeof(info)) < 0)
+		return -1;
+	
+	return 0;
+}
+	
